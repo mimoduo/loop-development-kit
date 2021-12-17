@@ -1,30 +1,35 @@
 /* eslint-disable no-async-promise-executor */
 import { clipboard, network, whisper } from '@oliveai/ldk';
 import {
+  AlignItems,
   ButtonSize,
   ButtonStyle,
+  Color,
   Component,
   CustomHeight,
   DateTimeType,
   Direction,
   JustifyContent,
+  IconSize,
+  MessageWhisperCopyMode,
+  MarkdownWhisperCopyMode,
   NewWhisper,
+  OpenDirection,
+  RichTextEditor,
+  StyleSize,
   TextAlign,
   Urgency,
   Whisper,
   WhisperComponentType,
-  MessageWhisperCopyMode,
-  MarkdownWhisperCopyMode,
-  IconSize,
-  Color,
-  AlignItems,
-  RichTextEditor,
-  StyleSize,
+  ProgressShape,
 } from '@oliveai/ldk/dist/whisper/types';
 import { stripIndent } from 'common-tags';
 import {
-  createAutocompleteComponent,
   autocompleteOptions,
+  createAutocompleteComponent,
+  createDivider,
+  createTextComponent,
+  createSelectComponent,
   logMap,
   resolveRejectButtons,
 } from './utils';
@@ -201,7 +206,6 @@ export const testMarkdownOnLinkClick = (): Promise<boolean> =>
 
     const markdown = stripIndent`
       # Links:
-
       [Some Link 1](# "A Link")
       Text between links
       [Some Link 2](#)
@@ -218,7 +222,7 @@ export const testMarkdownOnLinkClick = (): Promise<boolean> =>
         {
           body: markdown,
           type: WhisperComponentType.Markdown,
-          onLinkClick: (error: Error, linkName: string) => {
+          onLinkClick: (error, linkName) => {
             console.info(`Received click on the link: ${JSON.stringify(linkName)}`);
             if (linkName === 'Some Link 1') {
               onActionWrapper(error, 'SomeLink1', resolverMap, createdWhisper, resolve, reject);
@@ -325,7 +329,6 @@ export const testBoxInBox = (): Promise<boolean> =>
                     type: WhisperComponentType.Markdown,
                     body: stripIndent`
                       **Header Left**
-
                       Some text on the left
                       `,
                   },
@@ -347,7 +350,6 @@ export const testBoxInBox = (): Promise<boolean> =>
                     type: WhisperComponentType.Markdown,
                     body: stripIndent`
                       **Header Right**
-
                       Some text on the right
                       `,
                   },
@@ -1240,6 +1242,47 @@ export const testNetworkAndListComponents = (): Promise<boolean> =>
     });
   });
 
+export const testCollapseBoxOpenDirection = (): Promise<boolean> =>
+  new Promise(async (resolve, reject) => {
+    await whisper.create({
+      label: 'Collapse Box - Open Direction',
+      onClose: () => {
+        console.debug('closed');
+      },
+      components: [
+        {
+          label: 'Expand',
+          open: false,
+          openDirection: OpenDirection.Top,
+          children: [
+            {
+              body: 'This one opens with "Top"',
+              type: WhisperComponentType.Markdown,
+            },
+          ],
+          type: WhisperComponentType.CollapseBox,
+        },
+        {
+          label: 'Expand',
+          open: false,
+          openDirection: OpenDirection.Bottom,
+          children: [
+            {
+              body: 'This one opens with "Bottom"',
+              type: WhisperComponentType.Markdown,
+            },
+          ],
+          type: WhisperComponentType.CollapseBox,
+        },
+        {
+          body: 'Did the CollapseBoxes open the correct direction?',
+          type: WhisperComponentType.Markdown,
+        },
+        resolveRejectButtons(resolve, reject),
+      ],
+    });
+  });
+
 export const testDefaultValueForSelectAndRadio = (): Promise<boolean> =>
   new Promise(async (resolve, reject) => {
     try {
@@ -1277,6 +1320,7 @@ export const testDefaultValueForSelectAndRadio = (): Promise<boolean> =>
 
 export const testTooltips = (): Promise<boolean> =>
   new Promise(async (resolve, reject) => {
+    const dateValue = new Date(1634145967056);
     try {
       await whisper.create({
         label: 'Are all tooltips rendered?',
@@ -1342,6 +1386,7 @@ export const testTooltips = (): Promise<boolean> =>
             onChange: () => {
               // do nothing.
             },
+            value: dateValue,
             tooltip: 'Tooltip for Date',
           },
           {
@@ -1829,6 +1874,7 @@ export const testDateTime = (): Promise<boolean> =>
       ['Date', false],
       ['Time', false],
       ['DateTime', false],
+      ['ClearedDateTime', false],
     ]);
 
     try {
@@ -1880,6 +1926,30 @@ export const testDateTime = (): Promise<boolean> =>
           tooltip: 'Date/Time picker',
           min: new Date(2020, 0, 1),
           value: new Date(2021, 4, 5),
+          max: new Date(2022, 11, 31),
+        },
+        {
+          type: WhisperComponentType.DateTimeInput,
+          key: 'clearedDateTimeId',
+          id: 'clearedDateTimeId',
+          label: 'Cleared Date and Time',
+          dateTimeType: DateTimeType.DateTime,
+          onChange: (error: Error, param: string, onChangeWhisper: Whisper) => {
+            if (param) {
+              console.debug(`ClearedDateTime picker value received: ${param}`);
+              onActionWrapper(
+                error,
+                'ClearedDateTime',
+                resolverMap,
+                onChangeWhisper,
+                resolve,
+                reject,
+              );
+            }
+          },
+          tooltip: 'Date/Time picker',
+          min: new Date(2020, 0, 1),
+          value: '',
           max: new Date(2022, 11, 31),
         },
       ];
@@ -2244,6 +2314,8 @@ export const testAutocomplete = (): Promise<boolean> =>
       ['Select', false],
       ['Change', false],
       ['Multiple', false],
+      ['Custom', false],
+      ['MultiCustom', false],
     ]);
     try {
       await whisper.create({
@@ -2310,6 +2382,53 @@ export const testAutocomplete = (): Promise<boolean> =>
             tooltip: 'tooltip',
             value: '5',
           },
+          {
+            type: WhisperComponentType.Markdown,
+            body: "Enter the word 'custom'",
+          },
+          {
+            type: WhisperComponentType.Autocomplete,
+            label: 'Autocomplete Free Solo Test',
+            loading: true,
+            multiple: false,
+            freeSolo: true,
+            onChange: (error, value, onChangeWhisper) => {
+              console.log(`Received onChange value: ${JSON.stringify(value)}`);
+              if (value?.includes('custom')) {
+                onActionWrapper(error, 'Custom', resolverMap, onChangeWhisper, resolve, reject);
+              }
+            },
+            onSelect: (_error, value: string[]) => {
+              console.info(`Received onSelect value: ${JSON.stringify(value)}`);
+            },
+            options: autocompleteOptions,
+            tooltip: 'tooltip',
+          },
+          {
+            type: WhisperComponentType.Autocomplete,
+            label: 'Autocomplete Free Solo Multiple Test',
+            loading: true,
+            multiple: true,
+            freeSolo: true,
+            onChange: (error, value, onChangeWhisper) => {
+              console.log(`Received onChange value: ${JSON.stringify(value)}`);
+              if (value?.includes('custom')) {
+                onActionWrapper(
+                  error,
+                  'MultiCustom',
+                  resolverMap,
+                  onChangeWhisper,
+                  resolve,
+                  reject,
+                );
+              }
+            },
+            onSelect: (_error, value: string[]) => {
+              console.info(`Received onSelect value: ${JSON.stringify(value)}`);
+            },
+            options: autocompleteOptions,
+            tooltip: 'tooltip',
+          },
         ],
       });
     } catch (e) {
@@ -2321,6 +2440,27 @@ export const testAutocomplete = (): Promise<boolean> =>
 export const testPadding = (): Promise<boolean> =>
   new Promise(async (resolve, reject) => {
     try {
+      const divider = createDivider();
+
+      const paddingSize = whisper.StyleSize.Medium;
+      const componentsToGroup = [];
+      const componentCreationFunctions = [
+        createTextComponent,
+        createSelectComponent,
+        createAutocompleteComponent,
+      ];
+
+      for (
+        let functionIndex = 0;
+        functionIndex < componentCreationFunctions.length;
+        functionIndex++
+      ) {
+        const func = componentCreationFunctions[functionIndex];
+        const component = func(`${functionIndex}`, 'Label');
+        component.layout = { padding: paddingSize };
+        componentsToGroup.push(component);
+      }
+
       await whisper.create({
         label: 'Padding Property Test',
         onClose: () => {
@@ -2395,6 +2535,39 @@ export const testPadding = (): Promise<boolean> =>
                 ],
               },
             ],
+          },
+          divider,
+          {
+            body: 'Compare the elements below. Do they have padding? Do the labels appear in the correct place?',
+            type: WhisperComponentType.Markdown,
+          },
+          ...componentsToGroup,
+          divider,
+          {
+            body: 'Compare the elements wrapped in a box below. Do they have padding? Do the labels appear in the correct place?',
+            type: WhisperComponentType.Markdown,
+          },
+          {
+            type: whisper.WhisperComponentType.Box,
+            layout: {
+              margin: whisper.StyleSize.Small,
+            },
+            direction: Direction.Vertical,
+            justifyContent: JustifyContent.SpaceEvenly,
+            children: componentsToGroup,
+          },
+          divider,
+          {
+            body: 'Compare elements wrapped in a collapsible box below. Does they have padding? Do the labels appear in the correct place?',
+            type: WhisperComponentType.Markdown,
+          },
+          {
+            type: whisper.WhisperComponentType.CollapseBox,
+            layout: {
+              margin: whisper.StyleSize.Small,
+            },
+            open: true,
+            children: componentsToGroup,
           },
           resolveRejectButtons(resolve, reject, 'Yes', 'No'),
         ],
@@ -2545,6 +2718,21 @@ export const testWidth = (): Promise<boolean> =>
 export const testScrollInsideBox = (): Promise<boolean> =>
   new Promise(async (resolve, reject) => {
     try {
+      const housingTypeDropdown: whisper.Select = {
+        type: whisper.WhisperComponentType.Select,
+        id: 'housingResourceType',
+        key: 'housingResourceType',
+        label: 'Housing Resource',
+        options: [
+          'Housing Financial Assistance',
+          'Temporary Shelter',
+          'Subsidized Rentals (Section 8)',
+        ],
+        selected: 0,
+        onSelect: () => {
+          // do nothing
+        },
+      };
       await whisper.create({
         label: 'Scrolling Inside Box Test',
         onClose: () => {
@@ -2555,31 +2743,24 @@ export const testScrollInsideBox = (): Promise<boolean> =>
             body: 'Does is scroll?',
             type: WhisperComponentType.Markdown,
           },
-
+          {
+            type: whisper.WhisperComponentType.Markdown,
+            body: "If you can't see the scrollbar in the following Sclect component, then it's good!",
+          },
           {
             type: whisper.WhisperComponentType.Box,
             direction: Direction.Vertical,
             justifyContent: JustifyContent.SpaceEvenly,
             customHeight: CustomHeight.Small,
-            children: [
-              {
-                type: WhisperComponentType.TextInput,
-                label: 'TextInput',
-                onChange: (value) => {
-                  console.debug(`Input value changed: ${value}`);
-                },
-              },
-              {
-                type: whisper.WhisperComponentType.Markdown,
-                body: shortText,
-              },
-            ],
+            children: [housingTypeDropdown],
+            layout: {
+              marginTop: StyleSize.Small,
+            },
           },
           {
             type: whisper.WhisperComponentType.Box,
             direction: Direction.Horizontal,
             justifyContent: JustifyContent.SpaceEvenly,
-            customHeight: CustomHeight.Small,
             children: [
               {
                 type: whisper.WhisperComponentType.Markdown,
@@ -2647,18 +2828,18 @@ export const testJustifyContent = (): Promise<boolean> =>
               direction: Direction.Vertical,
               children: [
                 {
-                  body: 'left',
+                  body: 'space-even',
                   type: WhisperComponentType.Markdown,
                 },
               ],
             },
             {
               type: WhisperComponentType.Box,
-              alignment: JustifyContent.Right,
+              alignment: JustifyContent.Left,
               direction: Direction.Vertical,
               children: [
                 {
-                  body: 'right',
+                  body: 'space-even',
                   type: WhisperComponentType.Markdown,
                 },
               ],
@@ -2677,22 +2858,22 @@ export const testJustifyContent = (): Promise<boolean> =>
             },
             {
               type: WhisperComponentType.Box,
-              alignment: JustifyContent.Right,
+              alignment: JustifyContent.Left,
               direction: Direction.Vertical,
               children: [
                 {
-                  body: 'right',
+                  body: ' Right',
                   type: WhisperComponentType.Markdown,
                 },
               ],
             },
             {
               type: WhisperComponentType.Box,
-              alignment: JustifyContent.Right,
+              alignment: JustifyContent.Left,
               direction: Direction.Vertical,
               children: [
                 {
-                  body: 'right',
+                  body: ' Right',
                   type: WhisperComponentType.Markdown,
                 },
               ],
@@ -2711,7 +2892,7 @@ export const testJustifyContent = (): Promise<boolean> =>
             },
             {
               type: WhisperComponentType.Box,
-              alignment: JustifyContent.Right,
+              alignment: JustifyContent.Left,
               direction: Direction.Vertical,
               layout: {
                 flex: 'auto',
@@ -2740,7 +2921,7 @@ export const testJustifyContent = (): Promise<boolean> =>
           ],
         },
         {
-          body: 'Are the items above aligned?',
+          body: 'Are all the items above correctly aligned?',
           type: WhisperComponentType.Markdown,
         },
         resolveRejectButtons(resolve, reject),
@@ -2786,5 +2967,346 @@ export const testMissingLayouts = (): Promise<boolean> =>
         },
         resolveRejectButtons(resolve, reject, 'Yes', 'No', true),
       ],
+    });
+  });
+
+export const testEmptyBreadcrumbs = (): Promise<boolean> =>
+  new Promise(async (resolve, reject) => {
+    await whisper.create({
+      label: 'Breadcrumb Empty Test',
+      onClose: () => {
+        console.debug('Breadcrumb empty test closed.');
+      },
+      components: [
+        {
+          type: WhisperComponentType.Breadcrumbs,
+          links: [],
+        },
+        {
+          type: WhisperComponentType.Message,
+          body: 'There should be no content.',
+        },
+        resolveRejectButtons(resolve, reject, 'Yes', 'No', true),
+      ],
+    });
+  });
+
+export const testSimpleBreadcrumbs = (): Promise<boolean> =>
+  new Promise(async (resolve, reject) => {
+    await whisper.create({
+      label: 'Breadcrumb Simple Test',
+      onClose: () => {
+        console.debug('Breadcrumb simple test closed.');
+      },
+      components: [
+        {
+          type: WhisperComponentType.Breadcrumbs,
+          links: [
+            {
+              type: WhisperComponentType.Link,
+              text: 'Breadcrumb 1',
+            },
+            {
+              type: WhisperComponentType.Link,
+              text: 'Breadcrumb 2',
+            },
+            {
+              type: WhisperComponentType.Link,
+              text: 'Breadcrumb 3',
+            },
+          ],
+        },
+        {
+          type: WhisperComponentType.Message,
+          body: 'Do you see three (3) breadcrumbs?',
+        },
+        resolveRejectButtons(resolve, reject, 'Yes', 'No', true),
+      ],
+    });
+  });
+
+export const testManyBreadcrumbs = (): Promise<boolean> =>
+  new Promise(async (resolve, reject) => {
+    await whisper.create({
+      label: 'Breadcrumb Many Test',
+      onClose: () => {
+        console.debug('Breadcrumb many test closed.');
+      },
+      components: [
+        {
+          type: WhisperComponentType.Breadcrumbs,
+          links: [
+            {
+              type: WhisperComponentType.Link,
+              text: 'Breadcrumb 1',
+            },
+            {
+              type: WhisperComponentType.Link,
+              text: 'Breadcrumb 2',
+            },
+            {
+              type: WhisperComponentType.Link,
+              text: 'Breadcrumb 3',
+            },
+            {
+              type: WhisperComponentType.Link,
+              text: 'Breadcrumb 4',
+            },
+            {
+              type: WhisperComponentType.Link,
+              text: 'Breadcrumb 5',
+            },
+            {
+              type: WhisperComponentType.Link,
+              text: 'Breadcrumb 6',
+            },
+            {
+              type: WhisperComponentType.Link,
+              text: 'Breadcrumb 7',
+            },
+            {
+              type: WhisperComponentType.Link,
+              text: 'Breadcrumb 8',
+            },
+            {
+              type: WhisperComponentType.Link,
+              text: 'Breadcrumb 9',
+            },
+            {
+              type: WhisperComponentType.Link,
+              text: 'Breadcrumb 10',
+            },
+          ],
+        },
+        {
+          type: WhisperComponentType.Message,
+          body: "Are there 10 breadcrumbs with the majority collapsed in '...'?",
+        },
+        resolveRejectButtons(resolve, reject, 'Yes', 'No', true),
+      ],
+    });
+  });
+
+export const testManyClickBreadcrumbs = (): Promise<boolean> =>
+  new Promise(async (resolve, reject) => {
+    await whisper.create({
+      label: 'Breadcrumb Many Click Test',
+      onClose: () => {
+        console.debug('Breadcrumb many click test closed.');
+      },
+      components: [
+        {
+          type: WhisperComponentType.Breadcrumbs,
+          links: [
+            {
+              type: WhisperComponentType.Link,
+              text: 'Breadcrumb 1',
+            },
+            {
+              type: WhisperComponentType.Link,
+              text: 'Breadcrumb 2',
+            },
+            {
+              type: WhisperComponentType.Link,
+              text: 'Breadcrumb 3',
+            },
+            {
+              type: WhisperComponentType.Link,
+              text: 'Breadcrumb 4',
+            },
+            {
+              type: WhisperComponentType.Link,
+              text: 'Breadcrumb 5',
+              onClick: (_error: Error, onClickWhisper: Whisper) => {
+                onClickWhisper.close((e) => console.log(e));
+                resolve(true);
+              },
+            },
+            {
+              type: WhisperComponentType.Link,
+              text: 'Breadcrumb 6',
+            },
+            {
+              type: WhisperComponentType.Link,
+              text: 'Breadcrumb 7',
+            },
+            {
+              type: WhisperComponentType.Link,
+              text: 'Breadcrumb 8',
+            },
+            {
+              type: WhisperComponentType.Link,
+              text: 'Breadcrumb 9',
+            },
+            {
+              type: WhisperComponentType.Link,
+              text: 'Breadcrumb 10',
+            },
+          ],
+        },
+        {
+          type: WhisperComponentType.Message,
+          body: "Click 'Breadcrumb 5'.",
+        },
+      ],
+    });
+  });
+
+export const testSimpleClickBreadcrumbs = (): Promise<boolean> =>
+  new Promise(async (resolve, reject) => {
+    await whisper.create({
+      label: 'Breadcrumb Simple Click Test',
+      onClose: () => {
+        console.debug('Breadcrumb simple Click test closed.');
+      },
+      components: [
+        {
+          type: WhisperComponentType.Breadcrumbs,
+          links: [
+            {
+              type: WhisperComponentType.Link,
+              text: 'Breadcrumb 1',
+            },
+            {
+              type: WhisperComponentType.Link,
+              text: 'Breadcrumb 2',
+              onClick: (_error: Error, onClickWhisper: Whisper) => {
+                onClickWhisper.close((e) => console.log(e));
+                resolve(true);
+              },
+            },
+            {
+              type: WhisperComponentType.Link,
+              text: 'Breadcrumb 3',
+            },
+          ],
+        },
+        {
+          type: WhisperComponentType.Message,
+          body: "Click 'Breadcrumb 2'.",
+        },
+      ],
+    });
+  });
+
+export const testProgressIndicator = (): Promise<boolean> =>
+  new Promise(async (resolve, reject) => {
+    await whisper.create({
+      label: 'Did progress indicator show the percentage? ',
+      onClose: () => {
+        console.debug('closed');
+      },
+      components: [
+        {
+          type: WhisperComponentType.Progress,
+          determinate: 42,
+        },
+        {
+          type: WhisperComponentType.Markdown,
+          body: 'This is a small sized progress indicator.',
+        },
+        {
+          type: WhisperComponentType.Progress,
+          determinate: 30,
+          shape: ProgressShape.Circular,
+          size: StyleSize.Small,
+        },
+        {
+          type: WhisperComponentType.Markdown,
+          body: 'This is a medium sized progress indicator.',
+        },
+        {
+          type: WhisperComponentType.Progress,
+          determinate: 90,
+          shape: ProgressShape.Circular,
+          size: StyleSize.Medium,
+        },
+        {
+          type: WhisperComponentType.Markdown,
+          body: 'This is a large sized progress indicator.',
+        },
+        {
+          type: WhisperComponentType.Progress,
+          determinate: 90,
+          shape: ProgressShape.Circular,
+          size: StyleSize.Large,
+        },
+        {
+          type: WhisperComponentType.Markdown,
+          body: 'This is a progress indicator, size: None. If no size is set or size is set to None, it will be its default value: Medium',
+        },
+        {
+          type: WhisperComponentType.Progress,
+          determinate: 90,
+          shape: ProgressShape.Circular,
+          size: StyleSize.None,
+        },
+        resolveRejectButtons(resolve, reject, 'Yes', 'No', true),
+      ],
+    });
+  });
+
+export const testProgressIndicatorIndefinite = (): Promise<boolean> =>
+  new Promise(async (resolve, reject) => {
+    await whisper.create({
+      label: 'Did progress indicator have indefinite animation? ',
+      onClose: () => {
+        console.debug('closed');
+      },
+      components: [
+        {
+          type: WhisperComponentType.Progress,
+          size: StyleSize.Medium,
+          shape: ProgressShape.Linear,
+        },
+        {
+          type: WhisperComponentType.Progress,
+        },
+        resolveRejectButtons(resolve, reject, 'Yes', 'No', true),
+      ],
+    });
+  });
+
+export const testBreadcrumbUpdateBox = (): Promise<boolean> =>
+  new Promise(async (resolve, reject) => {
+    const box: whisper.Box = {
+      type: whisper.WhisperComponentType.Box,
+      children: [{ type: whisper.WhisperComponentType.Message, body: 'Text within Box component' }],
+      justifyContent: whisper.JustifyContent.Center,
+      direction: whisper.Direction.Vertical,
+    };
+    const link: whisper.Link = {
+      type: whisper.WhisperComponentType.Link,
+      text: 'Update Breadcrumb',
+      onClick: (error, thisWhisper) => {
+        if (error) console.error(error);
+        thisWhisper.update({
+          label: 'Can you see the text?',
+          components: [box, resolveRejectButtons(resolve, reject, 'Yes', 'No', true)],
+        });
+      },
+    };
+    const link2: whisper.Link = {
+      type: whisper.WhisperComponentType.Link,
+      text: 'Button 2',
+      onClick: (error, thisWhisper) => {
+        if (error) console.error(error);
+        thisWhisper.update({
+          label: 'test',
+          components: [{ type: whisper.WhisperComponentType.Markdown, body: '# Hello' }],
+        });
+      },
+    };
+    const bread: whisper.Breadcrumbs = {
+      type: whisper.WhisperComponentType.Breadcrumbs,
+      links: [link2, link, link],
+    };
+
+    await whisper.create({
+      label: ' Can you see text after clicking Update Breadcrumb Button?',
+      onClose: () => {
+        console.debug('closed');
+      },
+      components: [bread],
     });
   });

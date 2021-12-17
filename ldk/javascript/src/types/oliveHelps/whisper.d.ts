@@ -6,6 +6,7 @@ declare namespace WhisperService {
   type WhisperComponentType =
     | 'autocomplete'
     | 'box'
+    | 'breadcrumbs'
     | 'button'
     | 'checkbox'
     | 'collapseBox'
@@ -20,6 +21,7 @@ declare namespace WhisperService {
     | 'message'
     | 'number'
     | 'password'
+    | 'progress'
     | 'radioGroup'
     | 'richTextEditor'
     | 'select'
@@ -54,9 +56,13 @@ declare namespace WhisperService {
 
   type IconSize = 'small' | 'medium' | 'large' | 'x-large';
 
+  type ProgressShape = 'circular' | 'linear';
+
   type StyleSize = 'none' | 'small' | 'medium' | 'large';
 
   type WidthSize = 'full' | 'half';
+
+  type OpenDirection = 'bottom' | 'top';
 
   type CustomHeight = 'small' | 'medium' | 'large' | 'extraLarge';
 
@@ -120,6 +126,11 @@ declare namespace WhisperService {
     options?: AutocompleteOption[];
     tooltip?: string;
     value?: string;
+    freeSolo?: boolean;
+  };
+
+  type Breadcrumbs = Component<'breadcrumbs'> & {
+    links: Link[];
   };
 
   type Button = Component<'button'> & {
@@ -164,7 +175,7 @@ declare namespace WhisperService {
     body: string;
     onCopy?: WhisperHandler;
     tooltip?: string;
-    onLinkClick?: (error: Error | undefined, linkName: string) => void;
+    onLinkClick?: WhisperHandlerWithParam<string>;
   };
 
   type Message = Component<'message'> & {
@@ -248,6 +259,7 @@ declare namespace WhisperService {
     children: Array<ChildComponents>;
     label?: string;
     open: boolean;
+    openDirection?: OpenDirection;
     onClick?: WhisperHandlerWithParam<boolean>;
   };
 
@@ -260,9 +272,16 @@ declare namespace WhisperService {
     onClick?: WhisperHandler;
   };
 
+  type Progress = Component<'progress'> & {
+    determinate?: number;
+    shape?: ProgressShape;
+    size?: StyleSize;
+  };
+
   type ChildComponents =
     | Autocomplete
     | Box
+    | Breadcrumbs
     | Button
     | Checkbox
     | Divider
@@ -274,6 +293,7 @@ declare namespace WhisperService {
     | Message
     | NumberInput
     | Password
+    | Progress
     | RadioGroup
     | RichTextEditor
     | Select

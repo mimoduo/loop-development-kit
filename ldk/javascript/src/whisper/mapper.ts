@@ -1,6 +1,7 @@
 import {
   Box,
   BoxChildComponent,
+  Breadcrumbs,
   Component,
   NewWhisper,
   StateMap,
@@ -48,6 +49,15 @@ export function mapToInternalChildComponent(
           ? (error, whisper) => onClick(error, mapToExternalWhisper(whisper, stateMap))
           : undefined,
       } as WhisperService.Box;
+    case WhisperComponentType.Breadcrumbs:
+      // eslint-disable-next-line no-case-declarations
+      const { links, ...props } = component as Breadcrumbs;
+      return {
+        links: throwForDuplicateKeys(
+          links.map((link) => mapToInternalChildComponent(link, stateMap)),
+        ),
+        ...props,
+      } as WhisperService.Breadcrumbs;
     case WhisperComponentType.Button:
       return {
         ...component,
@@ -215,6 +225,8 @@ export function mapToInternalChildComponent(
           component.onChange(error, param, mapToExternalWhisper(whisper, stateMap));
         },
       } as WhisperService.Password;
+    case WhisperComponentType.Progress:
+      return component;
     case WhisperComponentType.RadioGroup:
       if (component.id && component.selected) {
         stateMap.set(component.id, component.selected);
@@ -269,11 +281,13 @@ export function mapToInternalChildComponent(
       } as WhisperService.TextInput;
     case WhisperComponentType.DateTimeInput:
       if (component.id && component.value) {
-        stateMap.set(component.id, component.value.toISOString());
+        const value =
+          component.value instanceof Date ? component.value.toISOString() : component.value;
+        stateMap.set(component.id, value);
       }
       return {
         ...component,
-        value: component.value?.toISOString(),
+        value: component.value instanceof Date ? component.value?.toISOString() : component.value,
         max: component.max?.toISOString(),
         min: component.min?.toISOString(),
         onChange: (error, param, whisper) => {
