@@ -1,0 +1,53 @@
+{
+  "name": "react-loop",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+    "build": "webpack",
+    "build-ldk": "cd ../.. && npm run build",
+    "build-all": "npm run build-ldk && npm i && npm run build"
+  },
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "@babel/core": "^7.13.10",
+    "@babel/plugin-transform-async-to-generator": "^7.13.0",
+    "@babel/plugin-transform-destructuring": "^7.13.0",
+    "@babel/plugin-transform-react-jsx": "^7.16.0",
+    "@babel/plugin-transform-runtime": "^7.13.10",
+    "@babel/preset-env": "^7.13.12",
+    "@babel/preset-react": "^7.16.0",
+    "@babel/runtime": "^7.13.10",
+    "@babel/runtime-corejs2": "^7.13.10",
+    "@oliveai/ldk": "^3.8.1",
+    "babel-loader": "^8.2.2",
+    "common-tags": "^1.8.0",
+    "core-js": "^3.12.1",
+    "react": "^17.0.2",
+    "react-dom": "^17.0.2",
+    "react-reconciler": "^0.26.2",
+    "terser-webpack-plugin": "^5.1.1",
+    "webpack": "^5.28.0",
+    "webpack-cli": "^4.5.0",
+    "webpack-merge": "^5.7.3"
+  },
+  "babel": {
+    "presets": [
+      [
+        "@babel/preset-env",
+        {
+          "targets": {
+            "node": true
+          }
+        }
+      ],
+      "@babel/preset-react"
+    ]
+  },
+  "ldk": {
+    "permissions": {
+      "whisper": {}
+    }
+  }
+}
